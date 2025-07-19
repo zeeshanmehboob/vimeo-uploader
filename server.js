@@ -1,75 +1,53 @@
-// server.js
 const express = require('express');
-const cors    = require('cors');
 const multer  = require('multer');
 const { Vimeo } = require('vimeo');
 require('dotenv').config();
 
 const app = express();
+const upload = multer({ dest: 'uploads/' });
+const port = process.env.PORT || 3000;
 
-// ── CORS SETUP ────────────────────────────────────────────────────────────────
-// Only allow requests from your Webflow staging origin:
-const allowedOrigins = [
-  'https://media-five-social-media-agency.webflow.io'
-];
-
-app.use(cors({
-  origin(origin, callback) {
-    // allow requests with no origin (e.g. curl, mobile apps)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error('CORS blocked: Origin not allowed'));
-  },
-  methods: ['GET','POST','OPTIONS'],
-  allowedHeaders: ['Content-Type']
-}));
-app.options('*', cors());
-
-// ── STATIC FILES ──────────────────────────────────────────────────────────────
-app.use(express.static('public'));
-
-// ── MULTER CONFIG ────────────────────────────────────────────────────────────
-const upload = multer({
-  dest: 'uploads/',
-  limits: { fileSize: 500 * 1024 * 1024 }  // 500 MB max file size
-});
-
-// ── VIMEO CLIENT ──────────────────────────────────────────────────────────────
+// Initialize Vimeo client
 const client = new Vimeo(
   process.env.VIMEO_CLIENT_ID,
   process.env.VIMEO_CLIENT_SECRET,
   process.env.VIMEO_ACCESS_TOKEN
 );
 
-// ── UPLOAD ENDPOINT ──────────────────────────────────────────────────────────
-app.post('/upload', upload.single('video'), (req, res) => {
+// Serve static files from public/
+app.use(express.static('public'));
+
+// Handle video upload
+app.post('/upload', upload.single('video'), function(req, res) {
+  var filePath = req.file.path;
   client.upload(
-    req.file.path,
+    filePath,
     {
       name: req.body.title || 'Untitled',
       description: req.body.description || ''
     },
-    // onSuccess
-    uri => {
-      console.log('✅ Upload complete! URI:', uri);
-      const videoId = uri.split('/').pop();
-      res.json({ url: 'https://vimeo.com/' + videoId });
+    // onSuccess → return clean URL
+    function(uri) {
+      console.log('✅ Upload complete! Video URI:', uri);
+      var parts = uri.split('/');
+      var videoId = parts[parts.length - 1];
+      var watchUrl = 'https://vimeo.com/' + videoId;
+      res.json({ url: watchUrl });
     },
-    // onProgress
-    (bytesUploaded, bytesTotal) => {
-      const pct = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
-      console.log('🔄 Progress:', pct + '%');
+    // onProgress → server-side logging
+    function(bytesUploaded, bytesTotal) {
+      var pct = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
+      console.log('🔄 ' + bytesUploaded + '/' + bytesTotal + ' bytes uploaded (' + pct + '%)');
     },
-    // onError
-    error => {
+    // onError → return JSON error
+    function(error) {
       console.error('❌ Upload failed:', error);
       res.status(500).json({ error: error.message || error });
     }
   );
 });
 
-// ── START SERVER ──────────────────────────────────────────────────────────────
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log('🚀 Server listening on http://localhost:' + port);
+// Start the server
+app.listen(port, function() {
+  console.log('🚀 Server listening at http://localhost:' + port);
 });
