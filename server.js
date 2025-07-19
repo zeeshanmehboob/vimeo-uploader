@@ -1,11 +1,20 @@
 const express = require('express');
 const multer  = require('multer');
+const cors = require("cors");
 const { Vimeo } = require('vimeo');
 require('dotenv').config();
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const port = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin: "https://media-five-social-media-agency.webflow.io/", // Change to your frontend origin in production
+    methods: ["POST", "GET"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 // Initialize Vimeo client
 const client = new Vimeo(
