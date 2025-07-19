@@ -7,7 +7,7 @@ require('dotenv').config();
 const app = express();
 // Allow only your Webflow site to talk to us:
 app.use(cors({
-  origin: 'https://YOUR-WEBFLOW-DOMAIN.webflow.io'
+  origin: 'https://media-five-social-media-agency.webflow.io/'
 }));
 
 // Serve static files if you have any
