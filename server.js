@@ -1,18 +1,19 @@
 const express = require('express');
 const multer  = require('multer');
-const cors = require("cors");
+const cors    = require('cors');
 const { Vimeo } = require('vimeo');
 require('dotenv').config();
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const port = "https://media-five-social-media-agency.webflow.io";
+const port = process.env.PORT || 3000;
 
+// Only allow your Webflow front‑end
 app.use(
   cors({
-    origin: "*", // Change to your frontend origin in production
-    methods: ["POST", "GET"],
-    allowedHeaders: ["Content-Type"],
+    origin: 'https://media-five-social-media-agency.webflow.io',
+    methods: ['POST','GET'],
+    allowedHeaders: ['Content-Type']
   })
 );
 
@@ -23,40 +24,39 @@ const client = new Vimeo(
   process.env.VIMEO_ACCESS_TOKEN
 );
 
-// Serve static files from public/
+// (Optional) serve any static files you put in /public
 app.use(express.static('public'));
 
-// Handle video upload
-app.post('/upload', upload.single('video'), function(req, res) {
-  var filePath = req.file.path;
+// Upload endpoint
+app.post('/upload', upload.single('video'), (req, res) => {
+  const filePath = req.file.path;
   client.upload(
     filePath,
     {
       name: req.body.title || 'Untitled',
       description: req.body.description || ''
     },
-    // onSuccess → return clean URL
-    function(uri) {
-      console.log('✅ Upload complete! Video URI:', uri);
-      var parts = uri.split('/');
-      var videoId = parts[parts.length - 1];
-      var watchUrl = 'https://vimeo.com/' + videoId;
+    // onSuccess
+    uri => {
+      console.log('✅ Upload complete:', uri);
+      const videoId = uri.split('/').pop();
+      const watchUrl = `https://vimeo.com/${videoId}`;
       res.json({ url: watchUrl });
     },
-    // onProgress → server-side logging
-    function(bytesUploaded, bytesTotal) {
-      var pct = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
-      console.log('🔄 ' + bytesUploaded + '/' + bytesTotal + ' bytes uploaded (' + pct + '%)');
+    // onProgress
+    (bytesUploaded, bytesTotal) => {
+      const pct = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
+      console.log(`🔄 ${bytesUploaded}/${bytesTotal} bytes (${pct}%)`);
     },
-    // onError → return JSON error
-    function(error) {
+    // onError
+    error => {
       console.error('❌ Upload failed:', error);
       res.status(500).json({ error: error.message || error });
     }
   );
 });
 
-// Start the server
-app.listen(port, function() {
-  console.log('🚀 Server listening at http://localhost:' + port);
+// Start server
+app.listen(port, () => {
+  console.log(`🚀 Listening on port ${port}`);
 });
