@@ -6,7 +6,7 @@ require('dotenv').config();
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const port = "https://collaby123.webflow.io";
+const port = "https://www.collaby.de";
 
 app.use(
   cors({
